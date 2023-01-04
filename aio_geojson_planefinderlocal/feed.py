@@ -68,42 +68,44 @@ class PlanefinderLocalFeed(GeoJsonFeed):
         """Update from external source and return filtered entries."""
         status, data = await self._fetch()
         if status == UPDATE_OK:
-            """Tranform json to GEOJson"""
-            output = {}
-            output['type'] = 'FeatureCollection'
-            output['minimal'] = 'true'
-            output['sqt'] = '0'
+            if data:
+                """Tranform json to GEOJson"""
+                output = {}
+                output['type'] = 'FeatureCollection'
+                output['minimal'] = 'true'
+                output['sqt'] = '0'
 
-            features = []
+                features = []
 
-            for k,v in data.items():
-                if k == 'aircraft':
-                    for x in v:
-                        if 'lat' in v[x] and 'lon' in v[x]:
-                            print(x)
-                            feature = {}
-                            feature['type'] = 'Feature'
-                            feature['id'] = x
-                            
-                            geometry = {}
-                            geometry['type'] = 'Point'
-                            coordinates = []
-                            coordinates.append(v[x]['lon'])
-                            coordinates.append(v[x]['lat'])
-                            geometry['coordinates'] = coordinates
+                for k,v in data.items():
+                    if k == 'aircraft':
+                        for x in v:
+                            if 'lat' in v[x] and 'lon' in v[x]:
+                                print(x)
+                                feature = {}
+                                feature['type'] = 'Feature'
+                                feature['id'] = x
+                                
+                                geometry = {}
+                                geometry['type'] = 'Point'
+                                coordinates = []
+                                coordinates.append(v[x]['lon'])
+                                coordinates.append(v[x]['lat'])
+                                geometry['coordinates'] = coordinates
 
-                            feature['geometry'] = geometry
-                            properties = {}
-                            for prop in v[x]:
-                                properties[prop] = v[x][prop]
-                                if prop == 'route':
-                                    properties['airport_dep'] = v[x][prop].split('-')[0]
-                                    properties['airport_final'] = v[x][prop].split('-')[-1]
-                            feature['properties'] = properties
-                            features.append(feature)
+                                feature['geometry'] = geometry
+                                properties = {}
+                                for prop in v[x]:
+                                    properties[prop] = v[x][prop]
+                                    if prop == 'route':
+                                        properties['airport_dep'] = v[x][prop].split('-')[0]
+                                        properties['airport_final'] = v[x][prop].split('-')[-1]
+                                properties['id'] = x
+                                feature['properties'] = properties
+                                features.append(feature)
 
-            output['features'] = features
-            data = geojson.loads(json.dumps(output))
+                output['features'] = features
+                data = geojson.loads(json.dumps(output))
             if data:
                 entries = []
                 global_data = self._extract_from_feed(data)

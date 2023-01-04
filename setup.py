@@ -2,7 +2,7 @@ import os
 
 from setuptools import setup, find_packages
 
-NAME = "aio_geojson_planerfinderlocal"
+NAME = "aio_geojson_planefinderlocal"
 AUTHOR = "Mark Kuchel"
 AUTHOR_EMAIL = "mark@kuchel.net"
 DESCRIPTION = "An async GeoJSON client library for planes using information from a Planefinder local server."
