@@ -1,4 +1,4 @@
-"""Flight Air Map feed."""
+"""Planefinder Local feed."""
 import logging
 from typing import Optional, TypeVar
 
@@ -7,11 +7,9 @@ import json
 import geojson
 from geojson import Feature, FeatureCollection
 from aio_geojson_client.feed import GeoJsonFeed
-from .feed_entry import PlanefinderLocalFeedEntry
+from aio_geojson_planefinderlocal.feed_entry import PlanefinderLocalFeedEntry
 from aio_geojson_client.feed_entry import FeedEntry
 from typing import Callable, Dict, Generic, List, Optional, Tuple
-
-# from aio_geojson_planefinderlocal.feed_entry import PlanefinderLocalFeedEntry
 
 UPDATE_OK = "OK"
 UPDATE_OK_NO_DATA = "OK_NO_DATA"
@@ -22,7 +20,7 @@ T_FEED_ENTRY = TypeVar("T_FEED_ENTRY", bound=FeedEntry)
 
 
 class PlanefinderLocalFeed(GeoJsonFeed):
-    """Flight Air Map feed."""
+    """Planefinder Local feed."""
 
     def __init__(self, websession: ClientSession, coordinates, url, filter_radius=None):
         """Initialise this service."""
