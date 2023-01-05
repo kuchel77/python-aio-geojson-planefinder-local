@@ -22,7 +22,7 @@ class PlanefinderLocalFeedEntry(FeedEntry):
     @property
     def external_id(self) -> str:
         """Return the title of this entry."""
-        return self._search_in_properties("aircraft_hex")
+        return self._search_in_properties("id")
 
     @property
     def call_sign(self) -> str:
