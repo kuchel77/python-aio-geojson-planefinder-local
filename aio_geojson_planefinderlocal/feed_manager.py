@@ -1,75 +1,90 @@
-"""Feed Manager for Flight Air Map Incidents feed."""
-from aio_geojson_client.feed_manager import FeedManagerBase
-from aiohttp import ClientSession
-from typing import Optional
-from .feed import PlanefinderLocalFeed
+"""Flight Air Map feed entry."""
+from datetime import datetime
 
-class PlanefinderLocalFeedManager(FeedManagerBase):
-    """Feed Manager for Flight Air Map feed."""
+import logging
+import pytz
 
-    def __init__(self,
-                 websession: ClientSession,
-                 generate_callback,
-                 update_callback,
-                 remove_callback,
-                 coordinates=None,
-                 feed_url=None,
-                 filter_radius=None):
-        """Initialize the Flight Air Map Manager."""
-        feed = PlanefinderLocalFeed(
-            websession,
-            coordinates,
-            feed_url,
-            filter_radius)
-        super().__init__(feed,
-                         generate_callback,
-                         update_callback,
-                         remove_callback)
+from aio_geojson_client.feed_entry import FeedEntry
 
-    def _update_internal(self, status: str, feed_entries):
-        """Update the feed and then update connected entities."""
+_LOGGER = logging.getLogger(__name__)
 
-        if status == UPDATE_OK:
-            print("here")
-            _LOGGER.debug("Data retrieved %s", feed_entries)
-            # Keep a copy of all feed entries for future lookups by entities.
-            self.feed_entries = {entry.external_id: entry for entry in feed_entries}
-            # Record current time of update.
-            self._last_update = datetime.now()
-            # For entity management the external ids from the feed are used.
-            feed_external_ids = set(self.feed_entries)
-            remove_external_ids = self._managed_external_ids.difference(
-                feed_external_ids
-            )
-            self._remove_entities(remove_external_ids)
-            update_external_ids = self._managed_external_ids.intersection(
-                feed_external_ids
-            )
-            self._update_entities(update_external_ids)
-            create_external_ids = feed_external_ids.difference(
-                self._managed_external_ids
-            )
-            self._generate_new_entities(create_external_ids)
-        elif status == UPDATE_OK_NO_DATA:
-            _LOGGER.debug("Update successful, but no data received from %s", self._feed)
+
+class PlanefinderLocalFeedEntry(FeedEntry):
+    """Flight Air Map Incidents feed entry."""
+
+    def __init__(self, home_coordinates, feature):
+        """Initialise this service."""
+        super().__init__(home_coordinates, feature)
+
+    @property
+    def title(self) -> str:
+        """Return the title of this entry."""
+        return self._search_in_properties("c")
+
+    @property
+    def external_id(self) -> str:
+        """Return the title of this entry."""
+        return self._search_in_properties("id")
+
+    @property
+    def flight_num(self) -> str:
+        """Return the title of this entry."""
+        return self._search_in_properties("flightno")
+
+    @property
+    def aircraft_registration(self) -> str:
+        """Return the y of this entry."""
+        return self._search_in_properties("reg")
+
+    @property
+    def aircraft_icao(self) -> str:
+        """Return the y of this entry."""
+        return self._search_in_properties("id")
+
+    @property
+    def aircraft_type(self) -> str:
+        """Return the location of this entry."""
+        return self._search_in_properties("type")
+
+    @property
+    def departure_airport(self) -> str:
+        """Return the y of this entry."""
+        return self._search_in_properties("airport_dep")
+
+    @property
+    def arrival_airport(self) -> str:
+        """Return the location of this entry."""
+        arrival_airport = self._search_in_properties("airport_final")
+        return arrival_airport
+
+    @property
+    def altitude(self) -> str:
+        """Return the location of this entry."""
+        if self._search_in_properties("altitude") is not None:
+            altitude = float(self._search_in_properties("altitude"))
         else:
-            _LOGGER.warning(
-                "Update not successful, no data received from %s", self._feed
-            )
-            # Remove all entities.
-            self._remove_entities(self._managed_external_ids.copy())
-            # Remove all feed entries and managed external ids.
-            self.feed_entries.clear()
-            self._managed_external_ids.clear()
+            altitude = 0
+        return altitude
 
-    def update(self):
-        """Update the feed and then update connected entities."""
-        status, feed_entries = self._feed.update()
-        self._update_internal(status, feed_entries)
+    @property
+    def squawk(self) -> str:
+        """Return the location of this entry."""
+        squawk = self._search_in_properties("squawk")
+        return squawk
 
-    def update_override(self, filter_overrides):
-        """Update the feed and then update connected entities."""
-        status, feed_entries = self._feed.update_override(
-            filter_overrides=filter_overrides
-        )
-        self._update_internal(status, feed_entries)
+    @property
+    def heading(self) -> str:
+        """Return the location of this entry."""
+        heading = self._search_in_properties("heading")
+        if heading is not None:
+            return heading
+        return None
+
+    @property
+    def publication_date(self) -> datetime:
+        """Return the publication date of this entry."""
+        last_update = self._search_in_properties("pos_update_time")
+        if last_update is not None:
+            publication_date = datetime.fromtimestamp(int(last_update), tz=pytz.utc)
+            return publication_date
+        return None

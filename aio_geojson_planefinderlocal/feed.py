@@ -1,44 +1,41 @@
 """Flight Air Map feed."""
 import logging
-from typing import Optional
+from typing import Optional, TypeVar
 
-from aio_geojson_client.feed import GeoJsonFeed
 from aiohttp import ClientSession
-import requests
 import json
-from json import JSONDecodeError
 import geojson
 from geojson import Feature, FeatureCollection
-
+from aio_geojson_client.feed import GeoJsonFeed
 from .feed_entry import PlanefinderLocalFeedEntry
-#from aio_geojson_planefinderlocal.feed_entry import PlanefinderLocalFeedEntry
+from aio_geojson_client.feed_entry import FeedEntry
+from typing import Callable, Dict, Generic, List, Optional, Tuple
+
+# from aio_geojson_planefinderlocal.feed_entry import PlanefinderLocalFeedEntry
 
 UPDATE_OK = "OK"
 UPDATE_OK_NO_DATA = "OK_NO_DATA"
 UPDATE_ERROR = "ERROR"
 
 _LOGGER = logging.getLogger(__name__)
+T_FEED_ENTRY = TypeVar("T_FEED_ENTRY", bound=FeedEntry)
 
 
 class PlanefinderLocalFeed(GeoJsonFeed):
     """Flight Air Map feed."""
 
-    def __init__(self,
-                 websession: ClientSession,
-                 coordinates,
-                 url,
-                 filter_radius=None):
+    def __init__(self, websession: ClientSession, coordinates, url, filter_radius=None):
         """Initialise this service."""
-        super().__init__(websession,                         
-                         coordinates,
-                         url=url,
-                         filter_radius=filter_radius)
+        super().__init__(websession, coordinates, url=url, filter_radius=filter_radius)
 
     def __repr__(self):
         """Return string representation of this feed."""
-        return '<{}(home={}, url={}, radius={})>'.format(
-            self.__class__.__name__, self._home_coordinates, self._url,
-            self._filter_radius)
+        return "<{}(home={}, url={}, radius={})>".format(
+            self.__class__.__name__,
+            self._home_coordinates,
+            self._url,
+            self._filter_radius,
+        )
 
     def _new_entry(self, home_coordinates, feature, global_data):
         """Generate a new entry."""
@@ -52,9 +49,10 @@ class PlanefinderLocalFeed(GeoJsonFeed):
     def _extract_last_timestamp(self, feed_entries):
         """Determine latest (newest) entry from the filtered feed."""
         if feed_entries:
-            dates = sorted(filter(
-                None, [entry.publication_date for entry in feed_entries]),
-                           reverse=True)
+            dates = sorted(
+                filter(None, [entry.publication_date for entry in feed_entries]),
+                reverse=True,
+            )
             if len(dates) > 0:
                 return dates[0]
         return None
@@ -64,48 +62,56 @@ class PlanefinderLocalFeed(GeoJsonFeed):
         return None
 
     async def _update_internal(
-        self, filter_function):
+        self, filter_function: Callable[[List[T_FEED_ENTRY]], List[T_FEED_ENTRY]]
+    ) -> Tuple[str, Optional[List[T_FEED_ENTRY]]]:
         """Update from external source and return filtered entries."""
         status, data = await self._fetch()
+        _LOGGER.error("start")
         if status == UPDATE_OK:
+            _LOGGER.error("OK")
             if data:
                 """Tranform json to GEOJson"""
                 output = {}
-                output['type'] = 'FeatureCollection'
-                output['minimal'] = 'true'
-                output['sqt'] = '0'
+                output["type"] = "FeatureCollection"
+                output["minimal"] = "true"
+                output["sqt"] = "0"
 
                 features = []
 
-                for k,v in data.items():
-                    if k == 'aircraft':
+                for k, v in data.items():
+                    if k == "aircraft":
                         for x in v:
-                            if 'lat' in v[x] and 'lon' in v[x]:
+                            if "lat" in v[x] and "lon" in v[x]:
                                 print(x)
                                 feature = {}
-                                feature['type'] = 'Feature'
-                                feature['id'] = x
-                                
-                                geometry = {}
-                                geometry['type'] = 'Point'
-                                coordinates = []
-                                coordinates.append(v[x]['lon'])
-                                coordinates.append(v[x]['lat'])
-                                geometry['coordinates'] = coordinates
+                                feature["type"] = "Feature"
+                                feature["id"] = x
 
-                                feature['geometry'] = geometry
+                                geometry = {}
+                                geometry["type"] = "Point"
+                                coordinates = []
+                                coordinates.append(v[x]["lon"])
+                                coordinates.append(v[x]["lat"])
+                                geometry["coordinates"] = coordinates
+
+                                feature["geometry"] = geometry
                                 properties = {}
                                 for prop in v[x]:
                                     properties[prop] = v[x][prop]
-                                    if prop == 'route':
-                                        properties['airport_dep'] = v[x][prop].split('-')[0]
-                                        properties['airport_final'] = v[x][prop].split('-')[-1]
-                                properties['id'] = x
-                                feature['properties'] = properties
+                                    if prop == "route":
+                                        properties["airport_dep"] = v[x][prop].split(
+                                            "-"
+                                        )[0]
+                                        properties["airport_final"] = v[x][prop].split(
+                                            "-"
+                                        )[-1]
+                                properties["id"] = x
+                                feature["properties"] = properties
                                 features.append(feature)
 
-                output['features'] = features
+                output["features"] = features
                 data = geojson.loads(json.dumps(output))
+            _LOGGER.error("Between")
             if data:
                 entries = []
                 global_data = self._extract_from_feed(data)
@@ -128,6 +134,7 @@ class PlanefinderLocalFeed(GeoJsonFeed):
                 return UPDATE_OK, filtered_entries
             else:
                 # Should not happen.
+                _LOGGER.error("After")
                 return UPDATE_OK, None
         elif status == UPDATE_OK_NO_DATA:
             # Happens for example if the server returns 304
@@ -136,3 +143,10 @@ class PlanefinderLocalFeed(GeoJsonFeed):
             # Error happened while fetching the feed.
             self._last_timestamp = None
             return UPDATE_ERROR, None
+
+    async def update(self) -> Tuple[str, Optional[List[T_FEED_ENTRY]]]:
+        """Update from external source and return filtered entries."""
+        _LOGGER.error("about to update")
+        return await self._update_internal(
+            lambda entries: self._filter_entries(entries)
+        )
