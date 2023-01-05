@@ -66,9 +66,7 @@ class PlanefinderLocalFeed(GeoJsonFeed):
     ) -> Tuple[str, Optional[List[T_FEED_ENTRY]]]:
         """Update from external source and return filtered entries."""
         status, data = await self._fetch()
-        _LOGGER.error("start")
         if status == UPDATE_OK:
-            _LOGGER.error("OK")
             if data:
                 """Tranform json to GEOJson"""
                 output = {}
@@ -82,7 +80,6 @@ class PlanefinderLocalFeed(GeoJsonFeed):
                     if k == "aircraft":
                         for x in v:
                             if "lat" in v[x] and "lon" in v[x]:
-                                print(x)
                                 feature = {}
                                 feature["type"] = "Feature"
                                 feature["id"] = x
@@ -111,7 +108,6 @@ class PlanefinderLocalFeed(GeoJsonFeed):
 
                 output["features"] = features
                 data = geojson.loads(json.dumps(output))
-            _LOGGER.error("Between")
             if data:
                 entries = []
                 global_data = self._extract_from_feed(data)
@@ -134,7 +130,6 @@ class PlanefinderLocalFeed(GeoJsonFeed):
                 return UPDATE_OK, filtered_entries
             else:
                 # Should not happen.
-                _LOGGER.error("After")
                 return UPDATE_OK, None
         elif status == UPDATE_OK_NO_DATA:
             # Happens for example if the server returns 304
@@ -146,7 +141,6 @@ class PlanefinderLocalFeed(GeoJsonFeed):
 
     async def update(self) -> Tuple[str, Optional[List[T_FEED_ENTRY]]]:
         """Update from external source and return filtered entries."""
-        _LOGGER.error("about to update")
         return await self._update_internal(
             lambda entries: self._filter_entries(entries)
         )
