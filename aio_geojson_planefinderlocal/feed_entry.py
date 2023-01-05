@@ -14,6 +14,15 @@ class PlanefinderLocalFeedEntry(FeedEntry):
     def __init__(self, home_coordinates, feature):
         """Initialise this service."""
         super().__init__(home_coordinates, feature)
+    @property
+    def title(self) -> str:
+        """Return the title of this entry."""
+        return self._search_in_properties("flightno")
+
+    @property
+    def external_id(self) -> str:
+        """Return the title of this entry."""
+        return self._search_in_properties("aircraft_hex")
 
     @property
     def call_sign(self) -> str:
@@ -55,18 +64,18 @@ class PlanefinderLocalFeedEntry(FeedEntry):
     def altitude(self) -> str:
         """Return the location of this entry."""
         if self._search_in_properties("altitude") is not None:
-            altitude = float(self._search_in_properties("altitude"))
+            altitude = self._search_in_properties("altitude")
         else:
-            altitude = 0
+            altitude = None
         return altitude
     
     @property
     def selected_altitude(self) -> str:
         """Return the location of this entry."""
         if self._search_in_properties("altitude") is not None:
-            selected_altitude = float(self._search_in_properties("selected_altitude"))
+            selected_altitude = self._search_in_properties("selected_altitude")
         else:
-            selected_altitude = 0
+            selected_altitude = None
         return selected_altitude
 
     @property
